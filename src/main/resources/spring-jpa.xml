@@ -1,0 +1,82 @@
+<?xml version= "1.0" encoding= "UTF-8" ?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:jpa="http://www.springframework.org/schema/data/jpa"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/tx
+        http://www.springframework.org/schema/tx/spring-tx.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/data/jpa
+        http://www.springframework.org/schema/data/jpa/spring-jpa.xsd">
+
+    <!-- 自动扫描排除@Controller 避免与 springmvc 重复扫描 -->
+    <context:component-scan base-package="com.javakc.sss">
+        <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
+    </context:component-scan>
+
+
+    <!-- 读取数据库连接配置文件 -->
+    <bean id="propertyConfigurer"
+          class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="locations">
+            <list>
+                <value>classpath:jdbc.properties</value>
+            </list>
+        </property>
+    </bean>
+
+    <!-- 配置 apache dbcp2 数据库连接池 -->
+    <bean id="dataSource" class=" org.apache.commons.dbcp2.BasicDataSource"
+          init-method="createDataSource" destroy-method="close">
+        <property name="driverClassName" value="${jdbc.driver}"/>
+        <property name="url" value="${jdbc.url}"/>
+        <property name="username" value="${jdbc.name}"/>
+        <property name="password" value="${jdbc.password}"/>
+    </bean>
+    <!-- 配置 jpa 实现 entityManager -->
+    <bean id="entityManagerFactory"
+          class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
+        <!-- 注入数据源 -->
+        <property name="dataSource" ref="dataSource"/>
+        <!-- 注入需要扫描 entity 实体对象 -->
+        <property name="packagesToScan" value="com.javakc.sss.*.entity"/>
+        <!-- 指定实现厂商专用特性: 如 hibernate -->
+        <property name="jpaVendorAdapter">
+            <bean class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter"></bean>
+        </property>
+        <!-- JPA 可选属性配置 -->
+        <property name="jpaProperties">
+            <props>
+
+                <!-- 生成的数据表的列的映射策略 -->
+                <prop key="hibernate.ejb.naming_strategy">org.hibernate.cfg.ImprovedNamingStrategy
+                </prop>
+                <!-- hibernate 基本属性 -->
+                <prop key="hibernate.dialect">org.hibernate.dialect.Oracle10gDialect</prop>
+                <prop key="hibernate.show_sql">true</prop>
+                <prop key="hibernate.format_sql">true</prop>
+                <prop key="hibernate.hbm2ddl.auto">update</prop>
+            </props>
+        </property>
+    </bean>
+
+
+    <!-- 配置事务管理器 -->
+    <bean id="transactionManager" class="org.springframework.orm.jpa.JpaTransactionManager">
+        <property name="entityManagerFactory" ref="entityManagerFactory"/>
+    </bean>
+
+
+    <!-- 启用注解支持事务 -->
+    <tx:annotation-driven proxy-target-class="true" transaction-manager="transactionManager"/>
+
+
+    <!-- 配置 SpringData base-package: 扫描 Repository dao 所在的 package -->
+    <jpa:repositories base-package="com.javakc.sss.*.dao" entity-manager-factory-ref="entityManagerFactory"/>
+
+
+</beans>
